@@ -1,0 +1,7 @@
+#Cache Drives
+UUID="b6ed03ee-b1dc-417f-b5a6-fe5603f03c13" /media/disk01 ext4 defaults,nofail,x-systemd.device-timeout=10 0 2
+UUID="d3689128-4477-4328-a7a0-46b5b699f738" /media/disk02 ext4 defaults,nofail,x-systemd.device-timeout=10 0 2
+UUID="7ffe898b-30f9-4ac7-9a07-c5cdeab7bc76" /media/disk03 ext4 defaults,nofail,x-systemd.device-timeout=10 0 2
+
+#MergerFS
+/media/disk* /files fuse.mergerfs defaults,sync_read,allow_other,category.action=all,category.create=ff,minfreespace=100G,fsname=Files 0 0
