@@ -1,0 +1,24 @@
+[Unit]
+Description=RClone Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+Environment=RCLONE_CONFIG=/home/username/.config/rclone/rclone.conf
+ExecStart=/usr/bin/rclone mount gtcrypt1: /media/diskdrive \
+   --allow-other \
+   --dir-cache-time 96h \
+   --drive-chunk-size 32M \
+   --log-level INFO \
+   --log-file /home/username/logs/rclone.log \
+   --timeout 1h \
+   --umask 002 \
+   --rc
+ExecStop=/bin/fusermount -uz /media/diskdrive
+Restart=on-failure
+User=username
+Group=plex
+
+[Install]
+WantedBy=multi-user.target
