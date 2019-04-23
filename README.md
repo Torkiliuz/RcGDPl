@@ -4,14 +4,14 @@ For a while I've been running my media server setup as a hybrid cloud solution. 
 First and foremost; using Google Drive has its limitations; most importantly the limit of `750 GB` uploaded per user every `24 hour`. One way to work around this limitation is to use Google Team Drive. Google Team Drive does not limit you to only use Google Business-registered accounts, so create a few free gmail accounts; link them to your Team Drive, and that limitation is circumvented. In my testing the maximum allowed free Google accounts created in a day is `3`; so it's a good idea to start creating these before going through the next steps.
 *We'll also use the same account-switching strategy when we mount drives in order to bypass restrictions set on the amount of API-requests allowed per user per day.*
 
-Tools we use in order to get this set up and working:
-[MergerFS](https://github.com/trapexit/mergerfs) - (*configuration*)
-[Rclone](https://rclone.org/) - (*configuration*)
-[Systemd Rclone Mount](https://raw.githubusercontent.com/animosity22/homescripts/master/rclone-systemd/gmedia-rclone.service) - (*modified*)
-[Nightly upload-script](https://raw.githubusercontent.com/animosity22/homescripts/master/scripts/upload_cloud) - (*modified*)
-[Swatchdog](https://github.com/ToddAtkins/swatchdog) - (configuration files)
-[Reclone](https://gist.github.com/Torkiliuz/90c7d50845dec168cc0de2c82c3672c3) - (shell script)
-[Plex Autoscan](https://github.com/l3uddz/plex_autoscan) - (*optional*)
+Tools we use in order to get this set up and working:  
+[MergerFS](https://github.com/trapexit/mergerfs) - (*configuration*)  
+[Rclone](https://rclone.org/) - (*configuration*)  
+[Systemd Rclone Mount](https://raw.githubusercontent.com/animosity22/homescripts/master/rclone-systemd/gmedia-rclone.service) - (*modified*)  
+[Nightly upload-script](https://raw.githubusercontent.com/animosity22/homescripts/master/scripts/upload_cloud) - (*modified*)  
+[Swatchdog](https://github.com/ToddAtkins/swatchdog) - (configuration files)  
+[Reclone](https://gist.github.com/Torkiliuz/90c7d50845dec168cc0de2c82c3672c3) - (shell script)  
+[Plex Autoscan](https://github.com/l3uddz/plex_autoscan) - (*optional*)  
 
 # MergerFS
 MergerFS is best installed by grabbing the appropriate release for your distribution [here](https://github.com/trapexit/mergerfs/releases).
