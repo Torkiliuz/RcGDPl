@@ -1,0 +1,39 @@
+#!/bin/bash
+# RClone Config file
+RCLONE_CONFIG=/home/username/.config/rclone/rclone.conf
+export RCLONE_CONFIG
+LOCKFILE="/var/lock/`basename $0`"
+
+
+new="gtcrypt1"
+
+for newfolder in "$1"
+do
+        case $newfolder in
+                "1" )
+                new="gtcrypt1";;
+                "2" )
+                new="gtcrypt2";;
+                "3" )
+                new="gtcrypt3";;
+                "4" )
+                new="gtcrypt4";;
+                "5" )
+                new="gtcrypt5";;
+                "6" )
+                new="gtcrypt6";;
+                "7" )
+                new="gtcrypt7";;
+                "8" )
+                new="gtcrypt8";;
+        esac
+done
+
+(
+  # Wait for lock for 5 seconds
+  flock -x -w 5 200 || exit 1
+
+# Move older local files to the cloud
+/usr/bin/rclone move /disk/ $new: --checkers 3 --max-transfer 730G --fast-list --log-file /home/username/rcup.log --tpslimit 3 --transfers 3 -v --exclude-from /home/username/.exclude --delete-empty-src-dirs
+
+) 200> ${LOCKFILE}
