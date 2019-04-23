@@ -1,0 +1,13 @@
+[Unit]
+Description=Swatch Log Monitoring Daemon
+After=syslog.target network.target auditd.service sshd.service
+
+[Service]
+ExecStart=/usr/bin/swatchdog -c /home/username/reclone.conf -t /home/username/logs/rclone.log --pid-file=/var/run/swatch.pid --daemon
+ExecStop=/bin/kill -s KILL $(cat /var/run/swatch.pid)
+Restart=on-failure
+Type=forking
+PIDFile=/var/run/swatch.pid
+
+[Install]
+WantedBy=multi-user.target
