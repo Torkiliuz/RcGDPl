@@ -1,7 +1,9 @@
 # Rclone + Google Drive + Plex
-For a while I've been running my media server setup as a hybrid cloud solution. It has been working well for me, and although there's a small amount of added latency it's still snappy enough to compete with a fully local setup. There are many things that make a hybrid cloud setup immensely more complicated than a strictly local setup though, and the learning curve is fairly steep. If you feel up for it and have some time available, this might be for you. In order to keep this from being a really long post I will not go as much into detail about each step, but I'll rather point to the resources necessary to understand how the setup works. Some of the scripts that are used in this guide are written by me, and they do a simple form of error checking, but they're in no way flawless. Use at your own risk. I know that some of the solutions in here can be automated and improved upon, this is not a *be all and end all* solution by any means.
+For a while I've been running my media server setup as a hybrid cloud solution. It has been working well for me, and although there's a small amount of added latency it's still snappy enough to compete with a fully local setup. There are many things that make a hybrid cloud setup immensely more complicated than a strictly local setup though, and the learning curve is fairly steep. If you feel up for it and have some time available, this might be for you.  
+In order to keep this from being a really long post I will not go as much into detail about each step, but I'll rather point to the resources necessary to understand how the setup works. Some of the scripts that are used in this guide are written by me, and they do a simple form of error checking, but they're in no way flawless. Use at your own risk.  
+I know that some of the solutions in here can be automated and improved upon, this is not a *be all and end all* solution by any means.
 
-First and foremost; using Google Drive has its limitations; most importantly the limit of `750 GB` uploaded per user every `24 hour`. One way to work around this limitation is to use Google Team Drive. Google Team Drive does not limit you to only use Google Business-registered accounts, so create a few free gmail accounts; link them to your Team Drive, and that limitation is circumvented. In my testing the maximum allowed free Google accounts created in a day is `3`; so it's a good idea to start creating these before going through the next steps.
+First and foremost; using Google Drive has its limitations; most importantly the limit of `750 GB` uploaded per user every `24 hour`. One way to work around this limitation is to use Google Team Drive. Google Team Drive does not limit you to only use Google Business-registered accounts, so create a few free gmail accounts; link them to your Team Drive, and that limitation is circumvented. In my testing the maximum allowed free Google accounts created in a day is `3`; so it's a good idea to start creating these before going through the next steps.  
 *We'll also use the same account-switching strategy when we mount drives in order to bypass restrictions set on the amount of API-requests allowed per user per day.*
 
 Tools we use in order to get this set up and working:  
@@ -14,8 +16,8 @@ Tools we use in order to get this set up and working:
 [Plex Autoscan](https://github.com/l3uddz/plex_autoscan) - (*optional*)  
 
 # MergerFS
-MergerFS is best installed by grabbing the appropriate release for your distribution [here](https://github.com/trapexit/mergerfs/releases).
-Set up your cache drives as the first drives that files get written to. You'll need a set amount of drives based on how much media you process through a week. I'd recommend at least `8 TB`, just in order to have a bit of a buffer in case an upload session fails, etc.. 
+MergerFS is best installed by grabbing the appropriate release for your distribution [here](https://github.com/trapexit/mergerfs/releases).  
+Set up your cache drives as the first drives that files get written to. You'll need a set amount of drives based on how much media you process through a week. I'd recommend at least `8 TB`, just in order to have a bit of a buffer in case an upload session fails, etc..  
 Your `/etc/fstab` should look a bit like this:
 ```
 #Cache Drives
@@ -26,43 +28,43 @@ UUID="7ffe898b-30f9-4ac7-9a07-c5cdeab7bc76" /media/disk03 ext4 defaults,nofail,x
 #MergerFS
 /media/disk* /files fuse.mergerfs defaults,sync_read,allow_other,category.action=all,category.create=ff,minfreespace=100G,fsname=Files 0 0
 ```
-Check the MergerFS github for an explanation of the parameters used. Most importantly it gets the Cache Drives listed as the first drives, and therefore `category.create=ff` makes sure that every write is tried on these drives first, instead of writing to the Google Drive mount directly.
+Check the MergerFS github for an explanation of the parameters used. Most importantly it gets the Cache Drives listed as the first drives, and therefore `category.create=ff` makes sure that every write is tried on these drives first, instead of writing to the Google Drive mount directly.  
 We're not using `/etc/fstab` to mount the Google Drive remote, as we need a more dynamic way to remount based on when rate limiting occurs. We'll use `Systemd` combined with `Swatchdog` to solve this.
 
 # Rclone
-First you'll install [Rclone](https://rclone.org/downloads/). This differs from platform to platform, and also depends a bit on if you want the latest development release, latest stable release, or if you want to go for the one already in your package manager. I'd recommend going with the latest stable release. 
-In order to configure Rclone run `rclone config` in your terminal.
-Press `n` to create a new remote, which will define your connection to Google Drive.
-name it something that makes sense, and add a number to the end of it. For example `gtdrive1`. We'll use the number for autorotation of users later. 
-Press the number that corresponds to **Google Drive** in the next part; this number changes throughout different versions of Rclone.
-Create a custom `Client Id` by following **[this guide(!)](https://rclone.org/drive/#making-your-own-client-id)**; add that to **Application Client Id**, press `Enter`.
-Do the same for **Application Client Secret**.
-Choose **Full access all files** if you get asked.
-Leave **ID of the root folder** blank, as we're only using a subfolder on the Team Drive; just press `Enter`.
-Just press `Enter` for **Service Account Credentials JSON file path**.
-Press `n` to skip **advanced config**.
-Answer the question about auto config based on how you're running the commands. If you're running through SSH choose `n`.
-Open the URL you're giving in a browser locally if you're running through SSH.
-Choose the account to log in with (use an account that is linked to the Team Drive you want to access).
-Paste the verification code that you get back into the SSH-session.
-Press `y` when asked to configure it as a Team Drive.
-Choose the Team Drive you want to access from the list of choices that gets printed by writing the number corresponding to it.
-Verify that things look OK, and press `y` if it is.
-Now we're back to the list of configured remotes.
-Press `n` to add another remote; we will encrypt our data so only we can access it, and also so that we don't get metadata leaked.
-This drive also needs a name. Building on the name from the first remote, name it something that makes sense, and add a number to the end for scripted account-rolling. For example `gtcrypt1`.
-Since we're encrypting a remote we'll choose the option **Encrypt/Decrypt a remote** in the menu.
-We then get asked for the remote to encrypt. In order to have the ability to use the Google Drive for other files than media we will use a subfolder for media. This way our top level directory only has 1 folder and doesn't get as cluttered. Add the remote you previosly created. In the example this would look like `gtdrive1:Media`.
-For encryption choose **Encrypt the filenames**, also known as **standard** (option `2` as of writing this guide).
-Then choose **Encrypt directory names** (`true`).
-Since we'll only have one account connected at a time it's important that we set the encryption password and salt the same for each account/remote that we set up. Otherwise we will only see the files uploaded by that particular user for each remote. Therefore you'll choose **Yes type in my own password** for both. The password and salt can and should be different though, but use the same password and salt for each account.
-We do not need to edit advanced config, so choose `n` for this.
-If everything looks OK, type `y`.
+First you'll install [Rclone](https://rclone.org/downloads/). This differs from platform to platform, and also depends a bit on if you want the latest development release, latest stable release, or if you want to go for the one already in your package manager. I'd recommend going with the latest stable release.  
+In order to configure Rclone run `rclone config` in your terminal.  
+Press `n` to create a new remote, which will define your connection to Google Drive.  
+Name it something that makes sense, and add a number to the end of it. For example `gtdrive1`. We'll use the number for autorotation of users later.  
+Press the number that corresponds to **Google Drive** in the next part; this number changes throughout different versions of Rclone.  
+Create a custom `Client Id` by following **[this guide(!)](https://rclone.org/drive/#making-your-own-client-id)**; add that to **Application Client Id**, press `Enter`.  
+Do the same for **Application Client Secret**.  
+Choose **Full access all files** if you get asked.  
+Leave **ID of the root folder** blank, as we're only using a subfolder on the Team Drive; just press `Enter`.  
+Just press `Enter` for **Service Account Credentials JSON file path**.  
+Press `n` to skip **advanced config**.  
+Answer the question about auto config based on how you're running the commands. If you're running through SSH choose `n`.  
+Open the URL you're giving in a browser locally if you're running through SSH.  
+Choose the account to log in with (use an account that is linked to the Team Drive you want to access).  
+Paste the verification code that you get back into the SSH-session.  
+Press `y` when asked to configure it as a Team Drive.  
+Choose the Team Drive you want to access from the list of choices that gets printed by writing the number corresponding to it.  
+Verify that things look OK, and press `y` if it is.  
+Now we're back to the list of configured remotes.  
+Press `n` to add another remote; we will encrypt our data so only we can access it, and also so that we don't get metadata leaked.  
+This drive also needs a name. Building on the name from the first remote, name it something that makes sense, and add a number to the end for scripted account-rolling. For example `gtcrypt1`.  
+Since we're encrypting a remote we'll choose the option **Encrypt/Decrypt a remote** in the menu.  
+We then get asked for the remote to encrypt. In order to have the ability to use the Google Drive for other files than media we will use a subfolder for media. This way our top level directory only has 1 folder and doesn't get as cluttered. Add the remote you previosly created. In the example this would look like `gtdrive1:Media`.  
+For encryption choose **Encrypt the filenames**, also known as **standard** (option `2` as of writing this guide).  
+Then choose **Encrypt directory names** (`true`).  
+Since we'll only have one account connected at a time it's important that we set the encryption password and salt the same for each account/remote that we set up. Otherwise we will only see the files uploaded by that particular user for each remote. Therefore you'll choose **Yes type in my own password** for both. The password and salt can and should be different though, but use the same password and salt for each account.  
+We do not need to edit advanced config, so choose `n` for this.  
+If everything looks OK, type `y`.  
 
 To check that the remote mount works you can run `rclone lsd gtcrypt1:`. If you don't get a warning message everything should be OK.
 
 ## Systemd Rclone Mount
-In order to mount our remote reliably with rolling accounts we'll use Systemd combined with log-watching done by Swatchdog. Animosity22 inspired this part, and the Systemd-file we're using is very similar to [his](https://raw.githubusercontent.com/animosity22/homescripts/master/rclone-systemd/gmedia-rclone.service).
+In order to mount our remote reliably with rolling accounts we'll use Systemd combined with log-watching done by Swatchdog. Animosity22 inspired this part, and the Systemd-file we're using is very similar to [his](https://raw.githubusercontent.com/animosity22/homescripts/master/rclone-systemd/gmedia-rclone.service).  
 The Systemd-file we're using should be written to `/etc/systemd/system/rclone.service` and contain the following:
 ```
 [Unit]
@@ -90,8 +92,8 @@ Group=plex
 [Install]
 WantedBy=multi-user.target
 ```
-Replace every instance of `/home/username` with the homefolder of the user you want to run Rclone as. When running `rclone config` the configuration is automatically saved to the homefolder of the user running that command. In the case of running as the user `username`, the configuration would be saved to `/home/username/.config/rclone/rclone.conf`. 
-In order to have the logs for rclone be saved to `/home/username/logs/rclone.log` the folder `/home/username/logs` needs to exist first. Create the folder by running `mkdir /home/username/logs` in the terminal.
+Replace every instance of `/home/username` with the homefolder of the user you want to run Rclone as. When running `rclone config` the configuration is automatically saved to the homefolder of the user running that command. In the case of running as the user `username`, the configuration would be saved to `/home/username/.config/rclone/rclone.conf`.  
+In order to have the logs for rclone be saved to `/home/username/logs/rclone.log` the folder `/home/username/logs` needs to exist first. Create the folder by running `mkdir /home/username/logs` in the terminal.  
 Also change `User=username` to the correct username.
 
 ## Nightly upload script
@@ -137,10 +139,10 @@ done
 
 ) 200> ${LOCKFILE}
 ```
-We're limiting the upload to 730 GB, as it's better to have uploaded a complete file and not hit the rate limit, than getting halfway through an uploaded file, and then fail because of rate limiting.
-There's an added functionality to be able to push to different remotes manually by writing a specific number after `rcup`, for example `bash /home/username/rcup 3` to use `gtcrypt3`. 
-For the nightly upload it will use `gtcrypt1` by default.
-We use `cron` in order to run this every night at 02:00. Edit crontab for root by typing `sudo crontab -e` in terminal.
+We're limiting the upload to 730 GB, as it's better to have uploaded a complete file and not hit the rate limit, than getting halfway through an uploaded file, and then fail because of rate limiting.  
+There's an added functionality to be able to push to different remotes manually by writing a specific number after `rcup`, for example `bash /home/username/rcup 3` to use `gtcrypt3`.  
+For the nightly upload it will use `gtcrypt1` by default.  
+We use `cron` in order to run this every night at 02:00. Edit crontab for root by typing `sudo crontab -e` in terminal.  
 Add the following to crontab:
 ```
 0 2 * * * /home/username/rcup 2>&1
@@ -158,7 +160,7 @@ Software/**
 ```
 
 # Swatchdog
-Swatchdog is part of your distributions package manager; install it as any other application you'd install through the package manager of your respective distribution.
+Swatchdog is part of your distributions package manager; install it as any other application you'd install through the package manager of your respective distribution.  
 For Swatchdog we'll also create a Systemd-file. Edit it as `/etc/systemd/system/swatch.service`, and add the following to it:
 ```
 [Unit]
@@ -175,13 +177,14 @@ PIDFile=/var/run/swatch.pid
 [Install]
 WantedBy=multi-user.target
 ```
-Edit `/home/username` as applicable here too.
+Edit `/home/username` as applicable here too.  
 We're telling Swatchdog to run with the configuration from `/home/username/reclone.conf`; that file looks like this:
 ```
 watchfor /googleapi: Error 403: Rate Limit Exceeded, rateLimitExceeded/
 exec sudo bash /home/username/reclone
 ```
-Rather simple stuff, right? This configuration tells Swatchdog to look for any event in the log file `/home/username/logs/rclone.log` that matches with `Error 403: Rate Limit Exceeded`. Everytime a `Rate Limit Exceeded` event occurs we get poor performance from the Google Drive mount. Therefore we switch over to a different user account that does not have the Rate Limit Exceeded for that day. 
+Rather simple stuff, right? This configuration tells Swatchdog to look for any event in the log file `/home/username/logs/rclone.log` that matches with `Error 403: Rate Limit Exceeded`.  
+Everytime a `Rate Limit Exceeded` event occurs we get poor performance from the Google Drive mount. Therefore we switch over to a different user account that does not have the Rate Limit Exceeded for that day. 
 The switching is done by using the following script (Swatchdog fixes this automatically):
 ```
 #!/bin/bash
