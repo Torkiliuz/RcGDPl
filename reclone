@@ -1,0 +1,55 @@
+#!/bin/bash
+#Made by Torkiliuz
+
+#This is used multiple times, so it's a variable (tr -dc '0-9' gets only numbers from the output)
+check=$(grep [0-99]\: /etc/systemd/system/rclone.service|awk '{print $3}'|tr -dc '0-9')
+
+#Define amount of rclone-mounts here
+num=8
+
+#---------------------------------------------------------------------------------------#
+
+#Adding option for force-parameters
+force=0
+while getopts f option; do
+    case $option in
+        f)
+          force=1 >&2; echo "forcing rotation" ;;
+       \?)
+          echo "Invalid option: -$OPTARG" >&2; exit 2 ;;
+    esac
+done
+
+#Check if Plex Transcodes are running, as they will crash if so
+while pgrep -x "Plex Transcoder" >/dev/null; do
+    if [ $(echo $force) -lt 1 ]; then
+    echo -e "ERROR: Plex Transcoder is currently running. Please stop any open transcodes\nSleeping for 10 seconds" >&2
+    sleep 10
+    elif [ $(echo $force) == 1 ]; then
+        break
+    fi
+done
+
+###Inform and also unmount drive
+echo "ReeeCloning" && fusermount -uz /media/diskdrive
+
+#If we're on the highest number we should start at the beginning (uses exactly the highest number here)
+if [ "$check" == "$num" ]; then
+    sed -i "s/gtcrypt[0-9]\+\:/gtcrypt1\:/" /etc/systemd/system/rclone.service
+    echo "changed to gtcrypt1:"
+    systemctl daemon-reload && systemctl restart rclone.service
+    exit 0
+fi
+
+#Runs a rolling increment of drive-numbers (uses 1 less than what you want to go up to here)
+if [[ "$check" -ge 1 && "$check" -le $((num-1)) ]]; then
+    ((check++))
+    sed -i "s/gtcrypt[0-9]\+\:/gtcrypt$check\:/" /etc/systemd/system/rclone.service
+    echo "changed to gtcrypt"$check":"
+    systemctl daemon-reload && systemctl restart rclone.service
+    exit 0
+fi
+
+
+#Kill it with fire if everything else fails
+exit 1
