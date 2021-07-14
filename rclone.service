@@ -1,21 +1,42 @@
 [Unit]
 Description=RClone Service
-After=network-online.target
 Wants=network-online.target
+After=network-online.target
+AssertPathIsDirectory=/media/diskdrive
 
 [Service]
 Type=notify
 Environment=RCLONE_CONFIG=/home/username/.config/rclone/rclone.conf
-ExecStart=/usr/bin/rclone mount gtcrypt1: /media/diskdrive \
+KillMode=none
+RestartSec=10
+ExecStart=/usr/bin/rclone mount gd: /media/diskdrive \
    --allow-other \
-   --dir-cache-time 96h \
-   --drive-chunk-size 32M \
-   --log-level INFO \
-   --log-file /home/username/logs/rclone.log \
-   --timeout 1h \
+   --dir-cache-time 5000h \
+   --syslog \
+   --poll-interval 10s \
    --umask 002 \
-   --rc
+   --user-agent GoogleDrive \
+   --rc \
+   --rc-addr 127.0.0.1:5572 \
+   --rc-no-auth \
+   --cache-dir=/media/disk00/Misc/.cache \
+   --vfs-cache-mode full \
+   --volname GoogleDrive \
+   --vfs-cache-max-size 600G \
+# If you are building a library from scratch and need to analyze a large amount of data, setting a very small read chunk size
+# will make things download a lot less data. So you can uncomment this section.
+# If everything is already scanned, you can leave it at the default as it helps things start up a little faster.
+#   --vfs-read-chunk-size 1M \
+# This adds a little buffer for read ahead
+#--vfs-read-ahead 256M \
+# This limits the age in the cache if the size is reached and it removes the oldest files first
+   --vfs-read-ahead 2G \
+   --vfs-cache-max-age 5000h \
+   --bwlimit-file 100M
+
 ExecStop=/bin/fusermount -uz /media/diskdrive
+ExecStartPre=-/bin/fusermount -uz /media/diskdrive
+ExecStartPost=/usr/bin/rclone rc vfs/refresh recursive=true --rc-addr 127.0.0.1:5572 _async=true
 Restart=on-failure
 User=username
 Group=plex
